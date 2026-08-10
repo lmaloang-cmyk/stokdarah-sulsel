@@ -1,6 +1,6 @@
 // Vercel Serverless Function — /api/freeze
 // Freeze records inactive for 7+ days
-// NO RPC FUNCTIONS - Direct database queries only
+// NO RPC, NO .or() - Simple direct queries only
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -24,35 +24,37 @@ export default async function handler(req, res) {
       let count = 0
 
       // Query 1: Records where last_active is null and is_frozen is false
-      const { count: count1, error: err1 } = await supabase
+      const { data: d1, error: e1 } = await supabase
         .from(tableName)
-        .select('*', { count: 'exact', head: true })
+        .update({ is_frozen: true })
         .is('is_frozen', false)
         .is('last_active', null)
+        .select('count')
 
-      if (err1) {
-        console.log(`[freeze] ${tableName} query1:`, err1.message)
+      if (e1) {
+        console.log(`[freeze] ${tableName} q1:`, e1.message)
         return 0
       }
-      count += count1 || 0
+      count += d1?.[0]?.count || 0
 
-      // Query 2: Records where last_active is older than 7 days
-      const { count: count2, error: err2 } = await supabase
+      // Query 2: Records where last_active < 7 days ago
+      const { data: d2, error: e2 } = await supabase
         .from(tableName)
-        .select('*', { count: 'exact', head: true })
+        .update({ is_frozen: true })
         .lt('last_active', sevenDaysAgo)
         .eq('is_frozen', false)
+        .select('count')
 
-      if (err2) {
-        console.error(`[freeze] ${tableName} query2:`, err2.message)
+      if (e2) {
+        console.error(`[freeze] ${tableName} q2:`, e2.message)
         return count
       }
-      count += count2 || 0
+      count += d2?.[0]?.count || 0
 
-      console.log(`[freeze] ${tableName}: ${count} records to freeze`)
+      console.log(`[freeze] ${tableName}: ${count} frozen`)
       return count
     } catch (e) {
-      console.error(`[freeze] ${tableName} exception:`, e.message)
+      console.error(`[freeze] ${tableName}:`, e.message)
       return 0
     }
   }
