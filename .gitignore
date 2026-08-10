@@ -1,0 +1,20 @@
+# Environment variables (contain secrets!)
+.env
+.env.local
+.env.production
+.env.*.local
+
+# Node
+node_modules/
+
+# Build
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+log/
