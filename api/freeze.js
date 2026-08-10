@@ -14,64 +14,66 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, supabaseKey)
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
+  let totalFrozen = 0
+  const results = { announcements: 0, requests: 0, events: 0 }
+
   // 1. Freeze announcements
-  let annCount = 0
   try {
-    const { data: annData, error: annErr } = await supabase
+    const { data, error } = await supabase
       .from('announcements')
       .update({ is_frozen: true })
-      .lte('last_active', sevenDaysAgo)
+      .or(`last_active.is.null,last_active.lt.${sevenDaysAgo}`)
       .eq('is_frozen', false)
       .select('id, title')
 
-    if (annErr) throw annErr
-    annCount = annData?.length || 0
-    console.log(`[freeze] announcements: ${annCount} frozen`)
+    if (error) throw error
+    const count = data?.length || 0
+    totalFrozen += count
+    results.announcements = count
+    console.log(`[freeze] announcements: ${count} frozen`)
   } catch (e) {
     console.error('[freeze] announcements error:', e.message)
   }
 
   // 2. Freeze blood_requests
-  let reqCount = 0
   try {
-    const { data: reqData, error: reqErr } = await supabase
+    const { data, error } = await supabase
       .from('blood_requests')
       .update({ is_frozen: true })
-      .lte('last_active', sevenDaysAgo)
+      .or(`last_active.is.null,last_active.lt.${sevenDaysAgo}`)
       .eq('is_frozen', false)
       .select('id, patient_name')
 
-    if (reqErr) throw reqErr
-    reqCount = reqData?.length || 0
-    console.log(`[freeze] blood_requests: ${reqCount} frozen`)
+    if (error) throw error
+    const count = data?.length || 0
+    totalFrozen += count
+    results.requests = count
+    console.log(`[freeze] blood_requests: ${count} frozen`)
   } catch (e) {
     console.error('[freeze] blood_requests error:', e.message)
   }
 
   // 3. Freeze donor_events
-  let evtCount = 0
   try {
-    const { data: evtData, error: evtErr } = await supabase
+    const { data, error } = await supabase
       .from('donor_events')
       .update({ is_frozen: true })
-      .lte('last_active', sevenDaysAgo)
+      .or(`last_active.is.null,last_active.lt.${sevenDaysAgo}`)
       .eq('is_frozen', false)
       .select('id, title')
 
-    if (evtErr) throw evtErr
-    evtCount = evtData?.length || 0
-    console.log(`[freeze] donor_events: ${evtCount} frozen`)
+    if (error) throw error
+    const count = data?.length || 0
+    totalFrozen += count
+    results.events = count
+    console.log(`[freeze] donor_events: ${count} frozen`)
   } catch (e) {
     console.error('[freeze] donor_events error:', e.message)
   }
 
-  const total = annCount + reqCount + evtCount
-
   return res.json({
     success: true,
-    frozen: total,
-    announcements: annCount,
-    requests: reqCount,
-    events: evtCount
+    frozen: totalFrozen,
+    ...results
   })
 }
