@@ -14,63 +14,51 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, supabaseKey)
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  // 1. Add columns if not exist
-  await supabase.rpc('add_freeze_columns')
-
-  // 2. Update last_active from created_at
-  await supabase.rpc('update_last_active')
-
-  // 3. Freeze old records
   let totalFrozen = 0
   const results = { announcements: 0, requests: 0, events: 0 }
 
-  try {
-    const { data, error } = await supabase
-      .from('announcements')
-      .update({ is_frozen: true })
-      .lt('last_active', sevenDaysAgo)
-      .select('count')
+  // Helper: freeze a table
+  async function freezeTable(tableName) {
+    try {
+      // First check if columns exist, add if not
+      const { error: addColErr } = await supabase.rpc('add_freeze_columns')
+      if (addColErr) console.log('[freeze] add_freeze_columns:', addColErr.message)
 
-    if (error) throw error
-    const count = data?.[0]?.count || 0
-    totalFrozen += count
-    results.announcements = count
-    console.log(`[freeze] announcements: ${count} frozen`)
-  } catch (e) {
-    console.error('[freeze] announcements error:', e.message)
+      // Update last_active
+      const { error: updateErr } = await supabase.rpc('update_last_active')
+      if (updateErr) console.log('[freeze] update_last_active:', updateErr.message)
+
+      // Freeze records
+      const { data, error } = await supabase
+        .from(tableName)
+        .update({ is_frozen: true })
+        .or(`last_active.is.null,last_active.lt.${sevenDaysAgo}`)
+        .eq('is_frozen', false)
+        .select('count')
+
+      if (error) {
+        console.error(`[freeze] ${tableName} error:`, error.message)
+        return 0
+      }
+
+      return data?.[0]?.count || 0
+    } catch (e) {
+      console.error(`[freeze] ${tableName} exception:`, e.message)
+      return 0
+    }
   }
 
-  try {
-    const { data, error } = await supabase
-      .from('blood_requests')
-      .update({ is_frozen: true })
-      .lt('last_active', sevenDaysAgo)
-      .select('count')
+  // 1. Freeze announcements
+  results.announcements = await freezeTable('announcements')
+  totalFrozen += results.announcements
 
-    if (error) throw error
-    const count = data?.[0]?.count || 0
-    totalFrozen += count
-    results.requests = count
-    console.log(`[freeze] blood_requests: ${count} frozen`)
-  } catch (e) {
-    console.error('[freeze] blood_requests error:', e.message)
-  }
+  // 2. Freeze blood_requests
+  results.requests = await freezeTable('blood_requests')
+  totalFrozen += results.requests
 
-  try {
-    const { data, error } = await supabase
-      .from('donor_events')
-      .update({ is_frozen: true })
-      .lt('last_active', sevenDaysAgo)
-      .select('count')
-
-    if (error) throw error
-    const count = data?.[0]?.count || 0
-    totalFrozen += count
-    results.events = count
-    console.log(`[freeze] donor_events: ${count} frozen`)
-  } catch (e) {
-    console.error('[freeze] donor_events error:', e.message)
-  }
+  // 3. Freeze donor_events
+  results.events = await freezeTable('donor_events')
+  totalFrozen += results.events
 
   return res.json({
     success: true,

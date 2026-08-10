@@ -1,21 +1,16 @@
 -- ========================================
--- ANTI-BEKU: Record Inaktif > 7 Hari
+-- ANTI-BEKU: Setup Database
 -- Run DI SUPABASE SQL EDITOR SEKALI SAJA
 -- ========================================
 
--- 1. Create functions first
+-- 1. Create helper functions
 CREATE OR REPLACE FUNCTION add_freeze_columns()
 RETURNS void AS $$
 BEGIN
-  -- announcements
   ALTER TABLE announcements ADD COLUMN IF NOT EXISTS last_active TIMESTAMP WITH TIME ZONE;
   ALTER TABLE announcements ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN DEFAULT FALSE;
-
-  -- blood_requests
   ALTER TABLE blood_requests ADD COLUMN IF NOT EXISTS last_active TIMESTAMP WITH TIME ZONE;
   ALTER TABLE blood_requests ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN DEFAULT FALSE;
-
-  -- donor_events
   ALTER TABLE donor_events ADD COLUMN IF NOT EXISTS last_active TIMESTAMP WITH TIME ZONE;
   ALTER TABLE donor_events ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN DEFAULT FALSE;
 END;
@@ -30,21 +25,31 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 2. Call functions
-SELECT add_freeze_columns();
-SELECT update_last_active();
-
--- 3. Disable RLS
+-- 2. Disable RLS for these tables
 ALTER TABLE announcements DISABLE ROW LEVEL SECURITY;
 ALTER TABLE blood_requests DISABLE ROW LEVEL SECURITY;
 ALTER TABLE donor_events DISABLE ROW LEVEL SECURITY;
 
--- 4. Freeze records older than 7 days
-UPDATE announcements SET is_frozen = TRUE WHERE COALESCE(last_active, created_at) < NOW() - INTERVAL '7 days' AND is_frozen = FALSE;
-UPDATE blood_requests SET is_frozen = TRUE WHERE COALESCE(last_active, created_at) < NOW() - INTERVAL '7 days' AND is_frozen = FALSE;
-UPDATE donor_events SET is_frozen = TRUE WHERE COALESCE(last_active, created_at) < NOW() - INTERVAL '7 days' AND is_frozen = FALSE;
+-- 3. Create the columns
+SELECT add_freeze_columns();
 
--- 5. Check results
+-- 4. Update last_active
+SELECT update_last_active();
+
+-- 5. Freeze records older than 7 days
+UPDATE announcements SET is_frozen = TRUE
+WHERE COALESCE(last_active, created_at) < NOW() - INTERVAL '7 days'
+AND is_frozen = FALSE;
+
+UPDATE blood_requests SET is_frozen = TRUE
+WHERE COALESCE(last_active, created_at) < NOW() - INTERVAL '7 days'
+AND is_frozen = FALSE;
+
+UPDATE donor_events SET is_frozen = TRUE
+WHERE COALESCE(last_active, created_at) < NOW() - INTERVAL '7 days'
+AND is_frozen = FALSE;
+
+-- 6. Check results
 SELECT 'announcements' AS tbl, COUNT(*) AS frozen FROM announcements WHERE is_frozen = TRUE
 UNION ALL
 SELECT 'blood_requests', COUNT(*) FROM blood_requests WHERE is_frozen = TRUE
