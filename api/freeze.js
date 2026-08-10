@@ -14,20 +14,25 @@ export default async function handler(req, res) {
   const supabase = createClient(supabaseUrl, supabaseKey)
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
+  // 1. Add columns if not exist
+  await supabase.rpc('add_freeze_columns')
+
+  // 2. Update last_active from created_at
+  await supabase.rpc('update_last_active')
+
+  // 3. Freeze old records
   let totalFrozen = 0
   const results = { announcements: 0, requests: 0, events: 0 }
 
-  // 1. Freeze announcements
   try {
     const { data, error } = await supabase
       .from('announcements')
       .update({ is_frozen: true })
-      .or(`last_active.is.null,last_active.lt.${sevenDaysAgo}`)
-      .eq('is_frozen', false)
-      .select('id, title')
+      .lt('last_active', sevenDaysAgo)
+      .select('count')
 
     if (error) throw error
-    const count = data?.length || 0
+    const count = data?.[0]?.count || 0
     totalFrozen += count
     results.announcements = count
     console.log(`[freeze] announcements: ${count} frozen`)
@@ -35,17 +40,15 @@ export default async function handler(req, res) {
     console.error('[freeze] announcements error:', e.message)
   }
 
-  // 2. Freeze blood_requests
   try {
     const { data, error } = await supabase
       .from('blood_requests')
       .update({ is_frozen: true })
-      .or(`last_active.is.null,last_active.lt.${sevenDaysAgo}`)
-      .eq('is_frozen', false)
-      .select('id, patient_name')
+      .lt('last_active', sevenDaysAgo)
+      .select('count')
 
     if (error) throw error
-    const count = data?.length || 0
+    const count = data?.[0]?.count || 0
     totalFrozen += count
     results.requests = count
     console.log(`[freeze] blood_requests: ${count} frozen`)
@@ -53,17 +56,15 @@ export default async function handler(req, res) {
     console.error('[freeze] blood_requests error:', e.message)
   }
 
-  // 3. Freeze donor_events
   try {
     const { data, error } = await supabase
       .from('donor_events')
       .update({ is_frozen: true })
-      .or(`last_active.is.null,last_active.lt.${sevenDaysAgo}`)
-      .eq('is_frozen', false)
-      .select('id, title')
+      .lt('last_active', sevenDaysAgo)
+      .select('count')
 
     if (error) throw error
-    const count = data?.length || 0
+    const count = data?.[0]?.count || 0
     totalFrozen += count
     results.events = count
     console.log(`[freeze] donor_events: ${count} frozen`)
