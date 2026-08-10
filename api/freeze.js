@@ -1,52 +1,54 @@
 // Vercel Serverless Function — /api/freeze
-// Called by Vercel Cron every day at 2:00 AM UTC
+// Direct database query, no RPC functions needed
 
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req, res) {
-  // Check environment variables
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
   const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
   if (!supabaseUrl || !supabaseKey) {
-    console.error('Missing env vars:', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey })
     return res.status(500).json({ error: 'Missing environment variables' })
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey)
 
-  // Test connection first
-  const { data: test, error: testErr } = await supabase.from('blood_stock').select('count')
-  if (testErr) {
-    console.error('Supabase connection error:', testErr)
-    return res.status(500).json({ error: 'Database connection failed: ' + testErr.message })
-  }
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  // Now try freeze functions
-  const { data: announcements, error: err1 } = await supabase
-    .rpc('freeze_announcements', { days: 7 })
+  // 1. Freeze announcements
+  const { data: annUpdates, error: annErr } = await supabase
+    .from('announcements')
+    .update({ is_frozen: true })
+    .or(`last_active.lt.${sevenDaysAgo},and(is_frozen.eq.false,last_active.eq.null)`)
+    .select('id, title')
 
-  const { data: requests, error: err2 } = await supabase
-    .rpc('freeze_blood_requests', { days: 7 })
+  // 2. Freeze blood_requests
+  const { data: reqUpdates, error: reqErr } = await supabase
+    .from('blood_requests')
+    .update({ is_frozen: true })
+    .or(`last_active.lt.${sevenDaysAgo},and(is_frozen.eq.false,last_active.eq.null)`)
+    .select('id, patient_name')
 
-  const { data: events, error: err3 } = await supabase
-    .rpc('freeze_donor_events', { days: 7 })
+  // 3. Freeze donor_events
+  const { data: evtUpdates, error: evtErr } = await supabase
+    .from('donor_events')
+    .update({ is_frozen: true })
+    .or(`last_active.lt.${sevenDaysAgo},and(is_frozen.eq.false,last_active.eq.null)`)
+    .select('id, title')
 
-  const errors = [err1, err2, err3].filter(Boolean)
+  const errors = [annErr, reqErr, evtErr].filter(Boolean)
   if (errors.length > 0) {
     console.error('Freeze errors:', errors)
     return res.status(500).json({ error: errors.map(e => e.message) })
   }
 
-  const totalFrozen = (announcements?.length || 0) + (requests?.length || 0) + (events?.length || 0)
-
-  console.log(`[Cron] Frozen: ${announcements?.length || 0} announcements, ${requests?.length || 0} requests, ${events?.length || 0} events`)
+  const total = (annUpdates?.length || 0) + (reqUpdates?.length || 0) + (evtUpdates?.length || 0)
 
   return res.json({
     success: true,
-    frozen: totalFrozen,
-    announcements: announcements?.length || 0,
-    requests: requests?.length || 0,
-    events: events?.length || 0
+    frozen: total,
+    announcements: annUpdates?.length || 0,
+    requests: reqUpdates?.length || 0,
+    events: evtUpdates?.length || 0
   })
 }

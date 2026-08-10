@@ -3,7 +3,7 @@
 -- Run DI SUPABASE SQL EDITOR SEKALI SAJA
 -- ========================================
 
--- 1. Tambah kolom last_active & is_frozen
+-- 1. Tambah kolom last_active & is_frozen ke semua tabel
 ALTER TABLE announcements
   ADD COLUMN IF NOT EXISTS last_active TIMESTAMP WITH TIME ZONE,
   ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN DEFAULT FALSE;
@@ -16,12 +16,12 @@ ALTER TABLE donor_events
   ADD COLUMN IF NOT EXISTS last_active TIMESTAMP WITH TIME ZONE,
   ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN DEFAULT FALSE;
 
--- 2. Isi last_active dari created_at (sekali saja)
+-- 2. Isi last_active dari created_at (sekali saja saat setup)
 UPDATE announcements SET last_active = created_at WHERE last_active IS NULL;
 UPDATE blood_requests SET last_active = created_at WHERE last_active IS NULL;
 UPDATE donor_events SET last_active = created_at WHERE last_active IS NULL;
 
--- 3. Fungsi Freeze
+-- 3. Fungsi Freeze (opsional, untuk dipanggil manual)
 CREATE OR REPLACE FUNCTION freeze_announcements(days INTEGER DEFAULT 7)
 RETURNS TABLE (item_id UUID, title TEXT, days_inactive INTERVAL) AS $$
 BEGIN
@@ -58,7 +58,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. Fungsi Thaw
+-- 4. Fungsi Thaw (buka beku)
 CREATE OR REPLACE FUNCTION thaw_announcement(p_id UUID)
 RETURNS TABLE (item_id UUID, is_frozen BOOLEAN) AS $$
 BEGIN
