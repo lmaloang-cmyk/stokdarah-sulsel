@@ -17,31 +17,40 @@ export default async function handler(req, res) {
   let totalFrozen = 0
   const results = { announcements: 0, requests: 0, events: 0 }
 
-  // Helper: freeze a table
+  // Helper: freeze a table using two separate queries
   async function freezeTable(tableName) {
     try {
-      // First check if columns exist, add if not
-      const { error: addColErr } = await supabase.rpc('add_freeze_columns')
-      if (addColErr) console.log('[freeze] add_freeze_columns:', addColErr.message)
+      let count = 0
 
-      // Update last_active
-      const { error: updateErr } = await supabase.rpc('update_last_active')
-      if (updateErr) console.log('[freeze] update_last_active:', updateErr.message)
-
-      // Freeze records
-      const { data, error } = await supabase
+      // Query 1: Records where last_active is null
+      const { data: d1, error: e1 } = await supabase
         .from(tableName)
         .update({ is_frozen: true })
-        .or(`last_active.is.null,last_active.lt.${sevenDaysAgo}`)
+        .is('is_frozen', false)
+        .select('count')
+
+      if (e1) {
+        console.error(`[freeze] ${tableName} query1 error:`, e1.message)
+        return 0
+      }
+      count += d1?.[0]?.count || 0
+
+      // Query 2: Records where last_active is older than 7 days
+      const { data: d2, error: e2 } = await supabase
+        .from(tableName)
+        .update({ is_frozen: true })
+        .lt('last_active', sevenDaysAgo)
         .eq('is_frozen', false)
         .select('count')
 
-      if (error) {
-        console.error(`[freeze] ${tableName} error:`, error.message)
-        return 0
+      if (e2) {
+        console.error(`[freeze] ${tableName} query2 error:`, e2.message)
+        return count
       }
+      count += d2?.[0]?.count || 0
 
-      return data?.[0]?.count || 0
+      console.log(`[freeze] ${tableName}: ${count} frozen`)
+      return count
     } catch (e) {
       console.error(`[freeze] ${tableName} exception:`, e.message)
       return 0
