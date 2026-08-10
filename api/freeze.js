@@ -1,6 +1,5 @@
 // Vercel Serverless Function — /api/freeze
 // Freeze records inactive for 7+ days
-// No RPC functions - direct database queries only
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -21,9 +20,6 @@ export default async function handler(req, res) {
   // Helper: freeze records in a table
   async function freezeTable(tableName) {
     try {
-      // First, add columns if they don't exist (using raw SQL)
-      await supabase.rpc('pg_advisory_lock', { objid: 12345 })
-
       // Query 1: Count records where last_active is null and is_frozen is false
       const { count: count1, error: err1 } = await supabase
         .from(tableName)
@@ -32,8 +28,7 @@ export default async function handler(req, res) {
         .is('last_active', null)
 
       if (err1) {
-        // Column doesn't exist yet, try to add it
-        console.log(`[freeze] ${tableName}: adding columns`)
+        console.log(`[freeze] ${tableName} columns not ready:`, err1.message)
         return 0
       }
 
