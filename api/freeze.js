@@ -17,38 +17,30 @@ export default async function handler(req, res) {
   let totalFrozen = 0
   const results = { announcements: 0, requests: 0, events: 0 }
 
-  // Helper: freeze a table using two separate queries
+  // Helper: freeze a table
   async function freezeTable(tableName) {
     try {
+      // Add columns if not exist
+      await supabase.rpc('add_freeze_columns')
+      // Update last_active
+      await supabase.rpc('update_last_active')
+
       let count = 0
 
-      // Query 1: Records where last_active is null
-      const { data: d1, error: e1 } = await supabase
-        .from(tableName)
-        .update({ is_frozen: true })
-        .is('is_frozen', false)
-        .select('count')
-
-      if (e1) {
-        console.error(`[freeze] ${tableName} query1 error:`, e1.message)
-        return 0
-      }
-      count += d1?.[0]?.count || 0
-
-      // Query 2: Records where last_active is older than 7 days
-      const { data: d2, error: e2 } = await supabase
+      // Query: records older than 7 days
+      const { data, error } = await supabase
         .from(tableName)
         .update({ is_frozen: true })
         .lt('last_active', sevenDaysAgo)
         .eq('is_frozen', false)
         .select('count')
 
-      if (e2) {
-        console.error(`[freeze] ${tableName} query2 error:`, e2.message)
-        return count
+      if (error) {
+        console.error(`[freeze] ${tableName}:`, error.message)
+        return 0
       }
-      count += d2?.[0]?.count || 0
 
+      count = data?.[0]?.count || 0
       console.log(`[freeze] ${tableName}: ${count} frozen`)
       return count
     } catch (e) {
@@ -57,15 +49,13 @@ export default async function handler(req, res) {
     }
   }
 
-  // 1. Freeze announcements
+  // Freeze all tables
   results.announcements = await freezeTable('announcements')
   totalFrozen += results.announcements
 
-  // 2. Freeze blood_requests
   results.requests = await freezeTable('blood_requests')
   totalFrozen += results.requests
 
-  // 3. Freeze donor_events
   results.events = await freezeTable('donor_events')
   totalFrozen += results.events
 
