@@ -3,7 +3,12 @@
 -- Run DI SUPABASE SQL EDITOR SEKALI SAJA
 -- ========================================
 
--- 1. Tambah kolom last_active & is_frozen ke semua tabel
+-- 0.Disable RLS dulu untuk tabel yang akan di-freeze (agar service role key bisa akses)
+ALTER TABLE announcements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE blood_requests DISABLE ROW LEVEL SECURITY;
+ALTER TABLE donor_events DISABLE ROW LEVEL SECURITY;
+
+-- 1. Tambah kolom last_active & is_frozen
 ALTER TABLE announcements
   ADD COLUMN IF NOT EXISTS last_active TIMESTAMP WITH TIME ZONE,
   ADD COLUMN IF NOT EXISTS is_frozen BOOLEAN DEFAULT FALSE;
@@ -21,7 +26,7 @@ UPDATE announcements SET last_active = created_at WHERE last_active IS NULL;
 UPDATE blood_requests SET last_active = created_at WHERE last_active IS NULL;
 UPDATE donor_events SET last_active = created_at WHERE last_active IS NULL;
 
--- 3. Fungsi Freeze (opsional, untuk dipanggil manual)
+-- 3. Fungsi Freeze
 CREATE OR REPLACE FUNCTION freeze_announcements(days INTEGER DEFAULT 7)
 RETURNS TABLE (item_id UUID, title TEXT, days_inactive INTERVAL) AS $$
 BEGIN
@@ -58,7 +63,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- 4. Fungsi Thaw (buka beku)
+-- 4. Fungsi Thaw
 CREATE OR REPLACE FUNCTION thaw_announcement(p_id UUID)
 RETURNS TABLE (item_id UUID, is_frozen BOOLEAN) AS $$
 BEGIN
