@@ -4,31 +4,38 @@
 import { createClient } from '@supabase/supabase-js'
 
 export default async function handler(req, res) {
-  if (req.method !== 'GET') {
-    return res.status(405).json({ error: 'Method not allowed' })
+  // Check environment variables
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    console.error('Missing env vars:', { hasUrl: !!supabaseUrl, hasKey: !!supabaseKey })
+    return res.status(500).json({ error: 'Missing environment variables' })
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
-    process.env.SUPABASE_SERVICE_ROLE_KEY
-  )
+  const supabase = createClient(supabaseUrl, supabaseKey)
 
-  // Freeze announcements
+  // Test connection first
+  const { data: test, error: testErr } = await supabase.from('blood_stock').select('count')
+  if (testErr) {
+    console.error('Supabase connection error:', testErr)
+    return res.status(500).json({ error: 'Database connection failed: ' + testErr.message })
+  }
+
+  // Now try freeze functions
   const { data: announcements, error: err1 } = await supabase
     .rpc('freeze_announcements', { days: 7 })
 
-  // Freeze blood requests
   const { data: requests, error: err2 } = await supabase
     .rpc('freeze_blood_requests', { days: 7 })
 
-  // Freeze donor events
   const { data: events, error: err3 } = await supabase
     .rpc('freeze_donor_events', { days: 7 })
 
   const errors = [err1, err2, err3].filter(Boolean)
   if (errors.length > 0) {
     console.error('Freeze errors:', errors)
-    return res.status(500).json({ error: errors })
+    return res.status(500).json({ error: errors.map(e => e.message) })
   }
 
   const totalFrozen = (announcements?.length || 0) + (requests?.length || 0) + (events?.length || 0)
