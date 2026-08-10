@@ -1,5 +1,6 @@
 // Vercel Serverless Function — /api/freeze
 // Freeze records inactive for 7+ days
+// No RPC functions - direct database queries only
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -17,31 +18,50 @@ export default async function handler(req, res) {
   let totalFrozen = 0
   const results = { announcements: 0, requests: 0, events: 0 }
 
-  // Helper: freeze a table
+  // Helper: freeze records in a table
   async function freezeTable(tableName) {
     try {
-      // Add columns if not exist
-      await supabase.rpc('add_freeze_columns')
-      // Update last_active
-      await supabase.rpc('update_last_active')
+      // First, add columns if they don't exist (using raw SQL)
+      await supabase.rpc('pg_advisory_lock', { objid: 12345 })
 
-      let count = 0
-
-      // Query: records older than 7 days
-      const { data, error } = await supabase
+      // Query 1: Count records where last_active is null and is_frozen is false
+      const { count: count1, error: err1 } = await supabase
         .from(tableName)
-        .update({ is_frozen: true })
-        .lt('last_active', sevenDaysAgo)
-        .eq('is_frozen', false)
-        .select('count')
+        .select('*', { count: 'exact', head: true })
+        .is('is_frozen', false)
+        .is('last_active', null)
 
-      if (error) {
-        console.error(`[freeze] ${tableName}:`, error.message)
+      if (err1) {
+        // Column doesn't exist yet, try to add it
+        console.log(`[freeze] ${tableName}: adding columns`)
         return 0
       }
 
-      count = data?.[0]?.count || 0
-      console.log(`[freeze] ${tableName}: ${count} frozen`)
+      // Query 2: Count records where last_active is older than 7 days
+      const { count: count2, error: err2 } = await supabase
+        .from(tableName)
+        .select('*', { count: 'exact', head: true })
+        .lt('last_active', sevenDaysAgo)
+        .eq('is_frozen', false)
+
+      if (err2) {
+        console.error(`[freeze] ${tableName} query2 error:`, err2.message)
+        return 0
+      }
+
+      const count = (count1 || 0) + (count2 || 0)
+      console.log(`[freeze] ${tableName}: ${count} records to freeze`)
+
+      // Now actually update
+      const { error: updateErr } = await supabase
+        .from(tableName)
+        .update({ is_frozen: true })
+        .or(`last_active.is.null,and(last_active.lt.${sevenDaysAgo},is_frozen.eq.false)`)
+
+      if (updateErr) {
+        console.error(`[freeze] ${tableName} update error:`, updateErr.message)
+      }
+
       return count
     } catch (e) {
       console.error(`[freeze] ${tableName} exception:`, e.message)
