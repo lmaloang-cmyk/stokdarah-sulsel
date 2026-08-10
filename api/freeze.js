@@ -1,5 +1,6 @@
 // Vercel Serverless Function — /api/freeze
 // Freeze records inactive for 7+ days
+// NO RPC FUNCTIONS - Direct database queries only
 
 import { createClient } from '@supabase/supabase-js'
 
@@ -20,7 +21,9 @@ export default async function handler(req, res) {
   // Helper: freeze records in a table
   async function freezeTable(tableName) {
     try {
-      // Query 1: Count records where last_active is null and is_frozen is false
+      let count = 0
+
+      // Query 1: Records where last_active is null and is_frozen is false
       const { count: count1, error: err1 } = await supabase
         .from(tableName)
         .select('*', { count: 'exact', head: true })
@@ -28,11 +31,12 @@ export default async function handler(req, res) {
         .is('last_active', null)
 
       if (err1) {
-        console.log(`[freeze] ${tableName} columns not ready:`, err1.message)
+        console.log(`[freeze] ${tableName} query1:`, err1.message)
         return 0
       }
+      count += count1 || 0
 
-      // Query 2: Count records where last_active is older than 7 days
+      // Query 2: Records where last_active is older than 7 days
       const { count: count2, error: err2 } = await supabase
         .from(tableName)
         .select('*', { count: 'exact', head: true })
@@ -40,23 +44,12 @@ export default async function handler(req, res) {
         .eq('is_frozen', false)
 
       if (err2) {
-        console.error(`[freeze] ${tableName} query2 error:`, err2.message)
-        return 0
+        console.error(`[freeze] ${tableName} query2:`, err2.message)
+        return count
       }
+      count += count2 || 0
 
-      const count = (count1 || 0) + (count2 || 0)
       console.log(`[freeze] ${tableName}: ${count} records to freeze`)
-
-      // Now actually update
-      const { error: updateErr } = await supabase
-        .from(tableName)
-        .update({ is_frozen: true })
-        .or(`last_active.is.null,and(last_active.lt.${sevenDaysAgo},is_frozen.eq.false)`)
-
-      if (updateErr) {
-        console.error(`[freeze] ${tableName} update error:`, updateErr.message)
-      }
-
       return count
     } catch (e) {
       console.error(`[freeze] ${tableName} exception:`, e.message)
