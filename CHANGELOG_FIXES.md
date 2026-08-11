@@ -1,3 +1,8 @@
+### Fix #7 — Hapus .env dari git history + servis role key perlu di-regenerate
+| Tanggal | File | Masalah | Akar | Fix | Verifikasi | Pelajaran | Log Keyword | Deploy |
+|---------|------|---------|------|-----|------------|-----------|-------------|--------|
+| 2026-08-11 | `.env` (history) | Service role key terekspos di commit `d76491a` yang sudah pernah di-push ke remote | `.env` berisi secret masuk repo meski sudah di `.gitignore` — tapi history lama masih menyimpannya | `git filter-branch` hapus `.env` dari semua commit, hapus `refs/original/` backup refs, `git reflog expire`, `git gc --prune=now --aggressive` | `git log --all -- .env` kosong ✓; `git cat-file -t d76491a` → `fatal: could not get object info` ✓; hanya `.env.example` tersisa ✓ | `.gitignore` saja tidak cukup jika file sudah pernah di-commit — harus rewrite history + force push | `git-filter-branch` `.env` `service_role_key` `regenerate` | ⚠️ SERVICE ROLE KEY WAJIB DI-REGENERATE di Supabase Dashboard sebelum force push |
+
 ### Fix #1 — handleAddEvent end_time = start_time (salah ambil nilai input)
 | Tanggal | File | Masalah | Akar | Fix | Verifikasi | Pelajaran | Log Keyword | Deploy |
 |---------|------|---------|------|-----|------------|-----------|-------------|--------|
