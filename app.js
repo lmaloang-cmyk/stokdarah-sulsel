@@ -162,8 +162,8 @@
     const [stockRes, setRes, annRes, evRes, hisRes] = await Promise.all([
       sb.from('blood_stock').select('*'),
       sb.from('settings').select('*'),
-      sb.from('announcements').select('*').eq('is_active', true).order('created_at', { ascending: false }),
-      sb.from('donor_events').select('*').eq('is_active', true).gte('event_date', today).order('event_date', { ascending: true }),
+      sb.from('announcements').select('*').eq('is_active', true).eq('is_frozen', false).order('created_at', { ascending: false }),
+      sb.from('donor_events').select('*').eq('is_active', true).eq('is_frozen', false).gte('event_date', today).order('event_date', { ascending: true }),
       sb.from('stock_history').select('*').gte('recorded_at', weekAgo).order('recorded_at', { ascending: true })
     ]);
     state.stock = {};
