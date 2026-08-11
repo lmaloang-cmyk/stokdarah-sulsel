@@ -438,13 +438,24 @@
     }
   }
 
-  async function fetchRole(uid) {
+   async function fetchRole(uid) {
       try {
         const { data, error } = await sb.rpc('get_user_role', { p_user_id: uid });
-        if (!eror && data) return data;
-      } catch (e) {}
-      return null;
-    }
+        if (!error && data) return data;
+        console.warn('[fetchRole] RPC failed:', error?.message, 'trying direct query');
+      } catch (e) {
+        console.warn('[fetchRole] RPC exception:', e.message);
+      }
+
+      // Fallback to direct query with error handling
+      try {
+        const { data } = await sb.from('user_roles').select('role').eq('user_id', uid).maybeSingle();
+        return data ? data.role : null;
+      } catch (e2) {
+        console.error('[fetchRole] All methods failed:', e2.message);
+        return null;
+      }
+   }
 
   async function restoreSession() {
     if (state.demo) return;
