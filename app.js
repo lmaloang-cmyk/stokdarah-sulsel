@@ -925,7 +925,13 @@
       location: $('#inputEventLocation').value.trim(),
       event_date: $('#inputEventDate').value,
       start_time: $('#inputEventTime').value.trim() || null,
-      end_time: $('#inputEventTime').value.trim() || null,
+      // Parsing "09.00 - 13.00 WITA" → end_time terpisah dari start_time
+      end_time: (() => {
+        const raw = $('#inputEventTime').value.trim();
+        if (!raw) return null;
+        const m = raw.match(/^([^-]+)\s*[-–—]\s*(.+)$/);
+        return m ? m[2].trim() : null;
+      })(),
       note: $('#inputEventNote').value.trim() || null
     };
     try {

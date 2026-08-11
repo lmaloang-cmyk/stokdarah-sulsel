@@ -1,0 +1,4 @@
+### Fix #1 — handleAddEvent end_time = start_time (salah ambil nilai input)
+| Tanggal | File | Masalah | Akar | Fix | Verifikasi | Pelajaran | Log Keyword | Deploy |
+|---------|------|---------|------|-----|------------|-----------|-------------|--------|
+| 2026-08-11 | `app.js:928` | `end_time` sama dengan `start_time` karena keduanya mengambil dari `$('#inputEventTime').value.trim()` yang sama | Field input jam donor cuma satu, tapi kode menyalin nilai yang sama ke dua kolom | Parse input dengan regex `^([^-]+)\s*[-–—]\s*(.+)$` untuk mengambil bagian sebelum dan sesudah pemisah (`-`/`–`/`—`) sebagai `start_time` dan `end_time` terpisah | Syntax check `node -c app.js` ✓; test parsing: `"09.00 - 13.00 WITA"` → end_time `"13.00 WITA"` ✓; input kosong/null tetap `null` ✓ | Selalu periksa apakah satu input field dipakai untuk dua field berbeda — jangan copy paste value tanpa parsing | `handleAddEvent` `end_time` `start_time` `inputEventTime` | PENDING verifikasi |
