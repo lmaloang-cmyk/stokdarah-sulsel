@@ -4,7 +4,8 @@ const ASSETS_TO_CACHE = [
   './index.html',
   './style.css',
   './app.js',
-  './js/config.js',
+  // ⚠️ js/config.js TIDAK di-cache — ini file dinamis, jika di-cache user akan stuck di config lama
+  // './js/config.js',
   './manifest.json',
   './assets/logo-sulsel.png'
 ];

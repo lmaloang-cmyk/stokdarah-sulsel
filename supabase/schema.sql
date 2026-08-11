@@ -47,6 +47,8 @@ create table if not exists public.announcements (
   body       text not null,
   tag        text not null default 'Info',
   is_active  boolean not null default true,
+  is_frozen  boolean not null default false,
+  last_active timestamptz,
   created_at timestamptz not null default now(),
   created_by uuid references auth.users(id)
 );
@@ -56,6 +58,9 @@ insert into public.announcements (title, body, tag) values
   ('Jadwal Donor Gedung UPTD', 'Senin–Minggu, pukul 08.00–20.00 WITA. Lokasi: Jl. Perintis Kemerdekaan KM 11, Tamalanrea, Makassar (samping kampus UNHAS).', 'Jadwal'),
   ('Syarat Donor Darah', 'Usia 17–60 tahun, berat badan minimal 45 kg, tekanan darah normal, Hb minimal 12,5 g/dL, jarak donor terakhir minimal 2 bulan.', 'Info')
 on conflict do nothing;
+
+-- Set last_active = created_at untuk semua data yang sudah ada
+update public.announcements set last_active = created_at where last_active is null;
 
 -- ----------------------------------------------------------------------------
 -- 4. TABEL PENGATURAN (nomor WA hotline & alamat)
@@ -268,6 +273,8 @@ create table if not exists public.blood_requests (
   komponen     text not null,
   jumlah       int  not null default 1,
   phone        text not null,
+  is_frozen    boolean not null default false,
+  last_active  timestamptz,
   created_at   timestamptz not null default now()
 );
 alter table public.blood_requests enable row level security;
@@ -278,6 +285,9 @@ drop policy if exists "petugas hapus permintaan"         on public.blood_request
 create policy "siapa pun boleh kirim permintaan" on public.blood_requests for insert with check (true);
 create policy "petugas baca permintaan"          on public.blood_requests for select using (public.is_admin());
 create policy "petugas hapus permintaan"         on public.blood_requests for delete using (public.is_admin());
+
+-- Set last_active = created_at untuk semua data yang sudah ada
+update public.blood_requests set last_active = created_at where last_active is null;
 
 -- ----------------------------------------------------------------------------
 -- 10. TABEL JADWAL DONOR KELILING
@@ -291,6 +301,8 @@ create table if not exists public.donor_events (
   end_time   text,
   note       text,
   is_active  boolean not null default true,
+  is_frozen  boolean not null default false,
+  last_active timestamptz,
   created_at timestamptz not null default now()
 );
 alter table public.donor_events enable row level security;
@@ -303,6 +315,9 @@ create policy "public baca jadwal"    on public.donor_events for select using (i
 create policy "petugas insert jadwal" on public.donor_events for insert with check (public.is_admin());
 create policy "petugas update jadwal" on public.donor_events for update using (public.is_admin()) with check (public.is_admin());
 create policy "petugas delete jadwal" on public.donor_events for delete using (public.is_admin());
+
+-- Set last_active = created_at untuk semua data yang sudah ada
+update public.donor_events set last_active = created_at where last_active is null;
 
 -- ----------------------------------------------------------------------------
 -- 11. TABEL RIWAYAT STOK (untuk grafik tren 7 hari)

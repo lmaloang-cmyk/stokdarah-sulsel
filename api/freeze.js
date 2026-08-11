@@ -1,8 +1,6 @@
 // Vercel Serverless Function — /api/freeze
 // Freeze records inactive for 7+ days
-// NO RPC, NO .or() - Simple direct queries only
-
-import { createClient } from '@supabase/supabase-js'
+// Uses two separate queries to avoid .or() / RPC limitations
 
 export default async function handler(req, res) {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -12,54 +10,63 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'Missing environment variables' })
   }
 
+  // Load Supabase client server-side
+  const { createClient } = await import('@supabase/supabase-js')
   const supabase = createClient(supabaseUrl, supabaseKey)
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
 
-  let totalFrozen = 0
   const results = { announcements: 0, requests: 0, events: 0 }
+  let totalFrozen = 0
 
-  // Helper: freeze records in a table
+  // Helper: freeze records older than 7 days using two separate queries
   async function freezeTable(tableName) {
     try {
-      let count = 0
-
-      // Query 1: Records where last_active is null and is_frozen is false
-      const { data: d1, error: e1 } = await supabase
+      // Query 1: count records with last_active IS NULL and is_frozen = false
+      const { count: countNull, error: e1 } = await supabase
         .from(tableName)
-        .update({ is_frozen: true })
+        .select('*', { count: 'exact', head: true })
         .is('is_frozen', false)
         .is('last_active', null)
-        .select('count')
 
       if (e1) {
-        console.log(`[freeze] ${tableName} q1:`, e1.message)
+        console.error(`[freeze] ${tableName} count-null:`, e1.message)
         return 0
       }
-      count += d1?.[0]?.count || 0
 
-      // Query 2: Records where last_active < 7 days ago
-      const { data: d2, error: e2 } = await supabase
+      // Query 2: count records where last_active < 7 days ago and is_frozen = false
+      const { count: countDate, error: e2 } = await supabase
         .from(tableName)
-        .update({ is_frozen: true })
+        .select('*', { count: 'exact', head: true })
         .lt('last_active', sevenDaysAgo)
         .eq('is_frozen', false)
-        .select('count')
 
       if (e2) {
-        console.error(`[freeze] ${tableName} q2:`, e2.message)
-        return count
+        console.error(`[freeze] ${tableName} count-date:`, e2.message)
+        return countNull || 0
       }
-      count += d2?.[0]?.count || 0
+
+      const count = (countNull || 0) + (countDate || 0)
+
+      // Perform the actual updates separately
+      if (countNull > 0) {
+        await supabase.from(tableName).update({ is_frozen: true })
+          .is('is_frozen', false)
+          .is('last_active', null)
+      }
+      if (countDate > 0) {
+        await supabase.from(tableName).update({ is_frozen: true })
+          .eq('is_frozen', false)
+          .lt('last_active', sevenDaysAgo)
+      }
 
       console.log(`[freeze] ${tableName}: ${count} frozen`)
       return count
     } catch (e) {
-      console.error(`[freeze] ${tableName}:`, e.message)
+      console.error(`[freeze] ${tableName} exception:`, e.message)
       return 0
     }
   }
 
-  // Freeze all tables
   results.announcements = await freezeTable('announcements')
   totalFrozen += results.announcements
 
