@@ -438,10 +438,14 @@
     }
   }
 
-   async function fetchRole(uid) {
+  async function fetchRole(uid) {
       try {
         const { data, error } = await sb.rpc('get_user_role', { p_user_id: uid });
         if (!error && data) return data;
+        console.warn('[fetchRole] RPC failed:', error?.message);
+      } catch (e) {}
+      return null;
+    }
         console.warn('[fetchRole] RPC failed:', error?.message, 'trying direct query');
       } catch (e) {
         console.warn('[fetchRole] RPC exception:', e.message);
