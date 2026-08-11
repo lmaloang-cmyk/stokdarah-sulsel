@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stok-darah-sulsel-v5';
+const CACHE_NAME = 'stok-darah-sulsel-v6';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
@@ -30,6 +30,18 @@ self.addEventListener('fetch', (event) => {
   // Jangan pernah cache request API (Supabase) — selalu ambil data terbaru.
   if (url.origin !== self.location.origin || event.request.method !== 'GET') {
     event.respondWith(fetch(event.request));
+    return;
+  }
+
+  // ⚠️ js/config.js SELALU network-first.
+  // Mengeluarkannya dari ASSETS_TO_CACHE saja TIDAK cukup: handler di bawah
+  // menyimpan setiap respons GET same-origin ke cache, lalu menyajikannya
+  // cache-first. Akibatnya config lama (anon key mati) tetap dipakai dan
+  // aplikasi diam-diam jatuh ke MODE DEMO.
+  if (url.pathname.endsWith('/js/config.js')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
+    );
     return;
   }
 

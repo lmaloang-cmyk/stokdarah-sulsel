@@ -439,24 +439,9 @@
   }
 
   async function fetchRole(uid) {
-     async function fetchRole(uid) {
-      try {
-        const { data, error } = await sb.rpc('get_user_role', { p_user_id: uid });
-        if (!error && data) return data;
-        console.warn('[fetchRole] RPC failed:', error?.message);
-      } catch (e) {}
-      return null;
-    }
-        
-      // Fallback to direct query with error handling
-      try {
-        const { data } = await sb.from('user_roles').select('role').eq('user_id', uid).maybeSingle();
-        return data ? data.role : null;
-      } catch (e2) {
-        console.error('[fetchRole] All methods failed:', e2.message);
-        return null;
-      }
-   }
+    const { data } = await sb.from('user_roles').select('role').eq('user_id', uid).maybeSingle();
+    return data ? data.role : null;
+  }
 
   async function restoreSession() {
     if (state.demo) return;
@@ -1147,8 +1132,16 @@
     subscribeRealtime();
 
     if (state.demo) {
-      // Info hanya untuk developer, tidak mengganggu pengunjung.
       console.info('[Stok Darah Sulsel] Mode demo aktif — isi js/config.js agar data live.');
+      // Peringatan TERLIHAT. Tanpa ini petugas bisa mengubah stok / ganti sandi
+      // dan mengira tersimpan, padahal cuma masuk localStorage perangkat itu.
+      const bar = document.createElement('div');
+      bar.id = 'demoModeBanner';
+      bar.textContent = '⚠️ MODE DEMO — tidak terhubung ke server. Perubahan stok & kata sandi TIDAK tersimpan.';
+      bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#b91c1c;color:#fff;' +
+        'font:600 13px/1.45 system-ui,-apple-system,sans-serif;padding:10px 14px;text-align:center;' +
+        'box-shadow:0 -2px 10px rgba(0,0,0,.35)';
+      document.body.appendChild(bar);
     }
   });
 })();
