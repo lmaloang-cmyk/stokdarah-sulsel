@@ -4,5 +4,4 @@
    ========================================================================== */
 window.SUPABASE_CONFIG = {
   url: "https://czsnmghckhweltsedgqf.supabase.co",
-  anonKey: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6c25tZ2hja2h3ZWx0c2VkZ3FmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYzMzgyNjIsImV4cCI6MjEwMTkxNDI2Mn0.ORitSIlN06pSFjxwgk_eFUOVK5SW6fdtZ0mBVdUHIH8"
-};
+  anonKey: "sb_publishable_Oj6OwTadNStrgGomjlnwDw_LW8mOZOY};
