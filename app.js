@@ -446,6 +446,10 @@
       } catch (e) {}
       return null;
     }
+        console.warn('[fetchRole] RPC failed:', error?.message);
+      } catch (e) {}
+      return null;
+    }
         console.warn('[fetchRole] RPC failed:', error?.message, 'trying direct query');
       } catch (e) {
         console.warn('[fetchRole] RPC exception:', e.message);
