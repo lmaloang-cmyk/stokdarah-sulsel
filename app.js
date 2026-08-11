@@ -439,9 +439,12 @@
   }
 
   async function fetchRole(uid) {
-    const { data } = await sb.from('user_roles').select('role').eq('user_id', uid).maybeSingle();
-    return data ? data.role : null;
-  }
+      try {
+        const { data, error } = await sb.rpc('get_user_role', { p_user_id: uid });
+        if (!eror && data) return data;
+      } catch (e) {}
+      return null;
+    }
 
   async function restoreSession() {
     if (state.demo) return;
