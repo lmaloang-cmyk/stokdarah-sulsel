@@ -25,8 +25,18 @@ Klik **Save**
 | Field | Value |
 |-------|-------|
 | **Name** | `SUPABASE_SERVICE_ROLE_KEY` |
-| **Value** | `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6c25tZ2hja2h3ZWx0c2VkZ3FmIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4NjMzODI2MiwiZXhwIjoyMTAxOTE0MjYyfQ.mToiXehxV3n3YIZzFLifGHMPwfXgYJxwrjzCHYscvyI` |
+| **Value** | `sb_secret_xxxxxxxxxxxxxxxxxxxxxxxx` |
 | **Environment** | Production, Preview, Development (centang semua) |
+
+> ⚠️ **Jangan pernah menulis nilai key yang asli di file ini.** File ini ikut
+> masuk ke repository dan bisa dibaca siapa pun yang punya akses.
+> Ambil nilainya langsung dari Supabase → **API Keys** → **Secret keys** →
+> tombol **Copy**, lalu tempel ke Vercel. Jangan disalin ke mana pun selain itu.
+
+> ℹ️ Sejak 2026-08-12, key model lama (JWT `eyJ...` anon & service_role) sudah
+> **dinonaktifkan** di project ini. Yang berlaku sekarang hanya:
+> - `sb_publishable_...` → dipakai di browser, ditulis di `js/config.js`
+> - `sb_secret_...` → dipakai di server saja, hanya sebagai env var di Vercel
 
 Klik **Save**
 

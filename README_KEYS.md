@@ -1,31 +1,52 @@
 # API Keys Supabase
 
-## Jenis Key
+## Jenis Key (model baru, berlaku sejak 2026-08-12)
 
-| Key | Keterangan | Untuk |
-|-----|-----------|--------|
-| **anon** (public) | Aman dipakai di browser/client | Frontend React |
-| **service_role** (secret) | Bypass RLS, akses penuh ke semua data | Backend API / Cron |
+| Key | Awalan nilai | Aman di browser? | Dipakai di |
+|-----|--------------|------------------|------------|
+| **Publishable** | `sb_publishable_` | ✅ Ya — dibatasi RLS | `js/config.js` (frontend) |
+| **Secret** | `sb_secret_` | ❌ TIDAK — menembus semua RLS | Env var Vercel `SUPABASE_SERVICE_ROLE_KEY` (server/cron saja) |
 
-## Contoh Key
+> ⚠️ **Jebakan yang pernah terjadi:** kedua tabel di halaman API Keys sama-sama
+> punya baris bernama **`default`**. Nama barisnya tidak menentukan apa pun.
+> Yang menentukan adalah **awalan nilainya**. Kalau `sb_secret_` sampai masuk ke
+> `js/config.js`, seluruh isi database bisa dibaca dan dihapus siapa pun yang
+> membuka situs.
 
-```
-anon:       eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-service_role: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
+## Key model lama (JWT) — SUDAH DINONAKTIFKAN
 
-## Cara Pakai di Vercel
+Key `anon` dan `service_role` berbentuk JWT panjang (`eyJhbGciOi...`) sudah
+**di-disable** di project ini. Jangan dipakai lagi, jangan diaktifkan kembali
+kecuali darurat. Alasannya: service_role JWT lama sempat ter-commit ke git
+history (lihat Fix #7).
 
-1. Buka Supabase Dashboard → Settings → API
-2. Scroll ke **"Legacy anon, service_role API keys"**
-3. Klik **"Reveal"** pada baris **service_role**
-4. Copy kuncinya
-5. Buka Vercel → Settings → Environment Variables
-6. Tambahkan:
-   - `NEXT_PUBLIC_SUPABASE_URL` = `https://czsnmghckhweltsedgqf.supabase.co`
-   - `SUPABASE_SERVICE_ROLE_KEY` = [paste service_role key]
-7. Klik **Save** → **Deploy**
+## Cara Pakai
+
+### Frontend (`js/config.js`)
+1. Supabase Dashboard → **API Keys** → tabel **Publishable key** → **Copy**
+2. Tempel ke `js/config.js`:
+   ```js
+   window.SUPABASE_CONFIG = {
+     url: "https://xxxx.supabase.co",
+     anonKey: "sb_publishable_xxxxxxxxxxxxxxxxxxxx"
+   };
+   ```
+3. Pastikan kutip penutup dan `};` lengkap, lalu jalankan `node --check js/config.js`.
+   Satu kutip yang hilang → file gagal di-parse → aplikasi jatuh ke **mode demo**
+   dan semua perubahan hanya masuk `localStorage` (lihat Fix #10).
+
+### Backend (Vercel)
+1. Supabase Dashboard → **API Keys** → tabel **Secret keys** → **Copy**
+2. Vercel → Settings → Environment Variables:
+   - `NEXT_PUBLIC_SUPABASE_URL` = `https://xxxx.supabase.co` (URL, **bukan** key)
+   - `SUPABASE_SERVICE_ROLE_KEY` = `sb_secret_...`
+3. **Redeploy**, lalu cek `/api/test`. Harus muncul:
+   - `url_preview` berupa alamat `https://...supabase.co`
+   - `key_preview` diawali `sb_secret_`
 
 ## ⚠️ PERHATIAN
-- **JANGAN** bagikan service_role key secara publik
-- Jika bocor, segera **regenerate** di Supabase
+- **JANGAN** menulis nilai key asli di file mana pun dalam repo ini — termasuk
+  README, dokumentasi, maupun komentar kode.
+- **JANGAN** menampilkan secret key di screenshot atau layar saat berbagi.
+- Kalau bocor: Supabase → API Keys → **Secret keys** → buat key baru → update env
+  var di Vercel → Redeploy → baru **revoke** key lama.

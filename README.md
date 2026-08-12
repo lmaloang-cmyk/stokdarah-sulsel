@@ -40,14 +40,21 @@ di balik **logo Sulsel**, dan data tersinkron ke semua HP via Supabase.
    ```
    Lalu **Run**. Ini membuat: tabel stok, tabel info, pengaturan no. WA, peran petugas,
    akun utama `cecemeri48@gmail.com`, fungsi tambah/hapus petugas, dan realtime.
-4. Buka **Project Settings → API**, salin **Project URL** dan **anon public key**.
+4. Buka **Project Settings → API Keys**, salin **Project URL** dan key dari tabel
+   **Publishable key** (nilainya diawali `sb_publishable_`).
+   ⚠️ Tabel **Secret keys** (`sb_secret_...`) JANGAN dipakai di sini — itu khusus server.
+   Kedua tabel sama-sama punya baris bernama `default`, jadi patokannya adalah
+   **awalan nilainya**, bukan namanya.
 5. Tempel keduanya ke `js/config.js`:
    ```js
    window.SUPABASE_CONFIG = {
      url: "https://xxxx.supabase.co",
-     anonKey: "eyJhbGciOi..."
+     anonKey: "sb_publishable_xxxxxxxxxxxxxxxxxxxx"
    };
    ```
+   Perhatikan kutip penutup pada `anonKey` dan `};` di baris tersendiri. Satu kutip
+   yang hilang membuat seluruh file gagal dibaca browser, dan aplikasi diam-diam
+   jatuh ke **mode demo** (data hanya tersimpan di perangkat itu, tidak ke server).
 6. (Disarankan) **Authentication → Sign In / Providers → Email** → matikan **Confirm email**,
    supaya petugas baru bisa langsung login tanpa verifikasi email.
 
