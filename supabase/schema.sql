@@ -102,9 +102,14 @@ $$;
 -- ----------------------------------------------------------------------------
 drop policy if exists "public read stok"    on public.blood_stock;
 drop policy if exists "petugas update stok" on public.blood_stock;
+drop policy if exists "petugas insert stok" on public.blood_stock;
 create policy "public read stok"    on public.blood_stock for select using (true);
 create policy "petugas update stok" on public.blood_stock for update
   using (public.is_admin()) with check (public.is_admin());
+-- WAJIB: app.js memakai .upsert() = INSERT ... ON CONFLICT, jadi policy INSERT
+-- harus ada. Tanpa ini: "new row violates row-level security policy".
+create policy "petugas insert stok" on public.blood_stock for insert
+  with check (public.is_admin());
 
 drop policy if exists "public read info aktif" on public.announcements;
 drop policy if exists "petugas insert info"    on public.announcements;
@@ -121,9 +126,13 @@ create policy "petugas delete info" on public.announcements for delete
 
 drop policy if exists "public read settings"    on public.settings;
 drop policy if exists "petugas update settings" on public.settings;
+drop policy if exists "petugas insert settings" on public.settings;
 create policy "public read settings"    on public.settings for select using (true);
 create policy "petugas update settings" on public.settings for update
   using (public.is_admin()) with check (public.is_admin());
+-- WAJIB: app.js memakai .upsert() untuk settings juga.
+create policy "petugas insert settings" on public.settings for insert
+  with check (public.is_admin());
 
 drop policy if exists "baca peran sendiri" on public.user_roles;
 create policy "baca peran sendiri" on public.user_roles for select
@@ -138,20 +147,26 @@ do $$
 declare
   v_uid      uuid := gen_random_uuid();
   v_email    text := 'cecemeri48@gmail.com';
-  v_password text := 'Akusaja1.';  -- ⚠️ GANTI sebelum menjalankan schema ini
+  v_password text := 'GANTI_SANDI_INI';  -- ⚠️ WAJIB diganti sebelum di-Run; jangan commit nilai aslinya
 begin
   if not exists (select 1 from auth.users where email = v_email) then
     insert into auth.users (
       instance_id, id, aud, role, email, encrypted_password,
       email_confirmed_at, created_at, updated_at,
-      raw_app_meta_data, raw_user_meta_data
+      raw_app_meta_data, raw_user_meta_data,
+      -- WAJIB: GoTrue membaca kolom ini sebagai TEXT non-null.
+      -- Kalau dibiarkan NULL -> login gagal "Database error querying schema".
+      confirmation_token, recovery_token, email_change,
+      email_change_token_new, email_change_token_current,
+      phone_change, phone_change_token, reauthentication_token
     ) values (
       '00000000-0000-0000-0000-000000000000', v_uid,
       'authenticated', 'authenticated', v_email,
       extensions.crypt(v_password, extensions.gen_salt('bf')),
       now(), now(), now(),
       '{"provider":"email","providers":["email"]}'::jsonb,
-      '{}'::jsonb
+      '{}'::jsonb,
+      '', '', '', '', '', '', '', ''
     );
     insert into auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
     values (
@@ -199,14 +214,19 @@ begin
   insert into auth.users (
     instance_id, id, aud, role, email, encrypted_password,
     email_confirmed_at, created_at, updated_at,
-    raw_app_meta_data, raw_user_meta_data
+    raw_app_meta_data, raw_user_meta_data,
+    -- WAJIB: lihat catatan di bagian 7.
+    confirmation_token, recovery_token, email_change,
+    email_change_token_new, email_change_token_current,
+    phone_change, phone_change_token, reauthentication_token
   ) values (
     '00000000-0000-0000-0000-000000000000', v_uid,
     'authenticated', 'authenticated', v_email,
     crypt(p_password, gen_salt('bf')),
     now(), now(), now(),
     '{"provider":"email","providers":["email"]}'::jsonb,
-    jsonb_build_object('full_name', coalesce(p_name, ''))
+    jsonb_build_object('full_name', coalesce(p_name, '')),
+    '', '', '', '', '', '', '', ''
   );
   insert into auth.identities (user_id, provider_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
   values (
