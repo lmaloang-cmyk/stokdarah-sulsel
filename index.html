@@ -34,7 +34,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="StokDarahSulsel">
-  <link rel="apple-touch-icon" href="assets/logo-sulsel.png">
+  <link rel="apple-touch-icon" href="assets/icon-192.png">
   <link rel="icon" href="assets/logo-sulsel.png">
 
   <link rel="stylesheet" href="style.css">
@@ -51,6 +51,15 @@
       <i class="fa-solid fa-droplet float-drop d3"></i>
       <i class="fa-solid fa-droplet float-drop d4"></i>
     </div>
+  </div>
+
+  <!-- ===================== SPLASH PEMBUKA (logo timbul) ===================== -->
+  <div class="app-splash" id="appSplash" aria-hidden="true">
+    <div class="splash-plate">
+      <img src="assets/logo-sulsel.png" alt="" class="splash-logo">
+    </div>
+    <p class="splash-title">UPT TRANSFUSI DARAH</p>
+    <p class="splash-sub">DINAS KESEHATAN <span class="nowrap">PROVINSI SULAWESI SELATAN</span></p>
   </div>
 
   <!-- ===================== NAVBAR ===================== -->
@@ -254,7 +263,8 @@
         </div>
       </div>
       <div class="footer-bottom">
-        <p>&copy; 2026 UPT Transfusi Darah Dinas Kesehatan Provinsi Sulawesi Selatan.</p>
+        <p class="footer-copy">&copy; 2026 UPT Transfusi Darah Dinas Kesehatan <span class="nowrap">Provinsi Sulawesi Selatan</span>.</p>
+        <p class="footer-motto">Semoga kerja kita selalu bernilai ibadah</p>
       </div>
     </div>
   </footer>

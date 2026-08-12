@@ -1,4 +1,4 @@
-const CACHE_NAME = 'stok-darah-sulsel-v6';
+const CACHE_NAME = 'stok-darah-sulsel-v7';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

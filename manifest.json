@@ -4,10 +4,22 @@
   "description": "Informasi Stok Darah Real-Time UPT Transfusi Darah Dinas Kesehatan Provinsi Sulawesi Selatan",
   "icons": [
     {
-      "src": "assets/logo-sulsel.png",
+      "src": "assets/icon-192.png",
       "type": "image/png",
-      "sizes": "192x192 512x512",
-      "purpose": "any maskable"
+      "sizes": "192x192",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any"
+    },
+    {
+      "src": "assets/icon-maskable-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "maskable"
     }
   ],
   "start_url": "./index.html",

@@ -106,13 +106,28 @@ input:focus, select:focus, textarea:focus {
 
 .embossed-logo-badge {
   position: relative; flex: 0 0 auto; width: 52px; height: 52px;
-  border-radius: 16px; background: var(--bg-card);
-  border: 1px solid var(--border-color); box-shadow: var(--shadow-card);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(255,255,255,0.10) 0%, rgba(0,0,0,0.06) 100%), var(--bg-card);
+  border: 1px solid var(--border-color);
+  /* Efek timbul: bayangan luar + kilau atas + cekungan bawah. */
+  box-shadow:
+    0 6px 14px rgba(0,0,0,0.28),
+    0 1px 2px rgba(0,0,0,0.20),
+    inset 0 1px 0 rgba(255,255,255,0.35),
+    inset 0 -2px 5px rgba(0,0,0,0.18);
   display: grid; place-items: center;
-  transition: transform 0.18s var(--ease-spring);
+  transition: transform 0.18s var(--ease-spring), box-shadow 0.18s ease;
 }
-.embossed-logo-badge:active { transform: scale(0.88); }
-.logo-img-embossed { width: 38px; height: 38px; object-fit: contain; }
+.embossed-logo-badge:active {
+  transform: scale(0.88);
+  box-shadow:
+    0 2px 6px rgba(0,0,0,0.30),
+    inset 0 2px 6px rgba(0,0,0,0.30);
+}
+.logo-img-embossed {
+  width: 38px; height: 38px; object-fit: contain;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.45)) drop-shadow(0 -1px 0 rgba(255,255,255,0.22));
+}
 .logo-ring {
   position: absolute; inset: -1px; border-radius: 16px;
   border: 2px solid var(--primary-red); opacity: 0;
@@ -383,8 +398,20 @@ input:focus, select:focus, textarea:focus {
 .social-icon.wa { color: var(--primary-green); }
 .social-icon.ig { color: #C13584; }
 .social-icon.fb { color: #1877F2; }
-.footer-bottom { border-top: 1px solid var(--border-color); padding-top: 14px; }
-.footer-bottom p { font-size: 0.68rem; color: var(--text-muted); text-align: center; }
+.footer-bottom {
+  border-top: 1px solid var(--border-color); padding-top: 14px;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.footer-bottom p { font-size: 0.68rem; color: var(--text-muted); }
+/* Di HP: hak cipta rata kiri, moto menempel di sudut kanan bawah. */
+.footer-copy { text-align: left; line-height: 1.6; }
+.footer-motto {
+  align-self: flex-end; text-align: right;
+  font-size: 0.66rem; font-weight: 700; font-style: italic;
+  letter-spacing: 0.02em; color: var(--primary-red); opacity: 0.85;
+}
+/* Menjaga frasa tetap satu baris — dipakai di footer & splash. */
+.nowrap { white-space: nowrap; }
 
 /* ---------- Bottom nav (HP) ---------- */
 .mobile-bottom-nav {
@@ -715,3 +742,55 @@ input:focus, select:focus, textarea:focus {
 /* Bottom nav: warna per menu */
 .bottom-nav-item:nth-child(3).active, .bottom-nav-item:nth-child(3):active { color: #30A46C; }
 .bottom-nav-item:nth-child(4).active, .bottom-nav-item:nth-child(4):active { color: #2F4BD7; }
+
+/* ---------- Splash pembuka (logo timbul) ---------- */
+.app-splash {
+  position: fixed; inset: 0; z-index: 200;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px;
+  padding: 24px; text-align: center;
+  background: radial-gradient(circle at 50% 34%, #16202F 0%, #0B0F17 72%);
+  animation: splashOut 0.55s ease-in 1.25s forwards;
+}
+@keyframes splashOut {
+  to { opacity: 0; visibility: hidden; pointer-events: none; }
+}
+.splash-plate {
+  width: 150px; height: 150px; border-radius: 40px;
+  display: grid; place-items: center;
+  background: linear-gradient(158deg, #1E2A3C 0%, #0D1420 100%);
+  box-shadow:
+    0 22px 45px rgba(0,0,0,0.60),
+    0 4px 10px rgba(0,0,0,0.40),
+    inset 0 2px 0 rgba(255,255,255,0.20),
+    inset 0 -4px 10px rgba(0,0,0,0.55);
+  animation: splashPop 0.75s cubic-bezier(0.2, 0.9, 0.3, 1.35) both;
+}
+@keyframes splashPop {
+  0%   { opacity: 0; transform: scale(0.72) translateY(14px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.splash-logo {
+  width: 106px; height: 106px; object-fit: contain;
+  filter: drop-shadow(0 5px 7px rgba(0,0,0,0.65)) drop-shadow(0 -1px 0 rgba(255,255,255,0.28));
+}
+.splash-title {
+  font-size: 1rem; font-weight: 900; letter-spacing: 0.06em; color: #FFFFFF;
+  animation: splashFade 0.6s ease-out 0.25s both;
+}
+.splash-sub {
+  font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em;
+  color: rgba(255,255,255,0.62); margin-top: -8px;
+  animation: splashFade 0.6s ease-out 0.4s both;
+}
+@keyframes splashFade {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Layar lebih lebar: hak cipta dan moto sebaris, moto tetap di kanan. */
+@media (min-width: 560px) {
+  .footer-bottom {
+    flex-direction: row; align-items: center; justify-content: space-between; gap: 14px;
+  }
+  .footer-motto { align-self: auto; }
+}
