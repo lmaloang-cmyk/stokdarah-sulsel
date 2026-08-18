@@ -8,5 +8,5 @@
    ========================================================================== */
 window.SUPABASE_CONFIG = {
   url: "https://czsnmghckhweltsedgqf.supabase.co",
-  anonKey: "sb_publishable_Oj6OwTadNStrgGomjlnwDw_LW8mOZOY"
+  anonKey: "sb_publishable_-QgFY6akbykh2yC9c4V6Aw_8bzl9lkW"
 };
